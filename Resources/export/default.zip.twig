@@ -1,0 +1,381 @@
+{% set showUserColumn = showUserColumn ?? true %}
+{% set showInternalRate = showInternalRate ?? false %}
+{% set showRateColumn = false %}
+{% set showRateBudget = showRateBudget ?? false %}
+{% set showTimeBudget = showTimeBudget ?? false %}
+{% set showTotalSummary = showTotalSummary ?? false %}
+{% set now = create_date('now', app.user) %}
+{% set decimal = decimal ?? false %}
+{# this is only triggered, if a user exports from his personal timesheet screen #}
+{% if query.user is not null %}
+    {% set showUserColumn = false %}
+    {# if exporting via the admin screen, users without view_rate_own_timesheet might still see their own rates #}
+    {% set showRateColumn = is_granted('view_rate_own_timesheet') %}
+{% endif %}
+<html lang="{{ app.request.locale }}">
+<head>
+{% block styles %}
+    <style>
+        body {
+            font-family: sans-serif;
+            font-size: 10pt;
+            margin: 0;
+            padding: 0;
+        }
+        p {
+            margin: 0;
+        }
+        table.items {
+            border: 0.1mm solid #000000;
+            width: 100%;
+            font-size: 9pt;
+            border-collapse: collapse;
+        }
+        td, th {
+            padding: 7px;
+        }
+        td {
+            vertical-align: top;
+        }
+        .items td {
+            border-left: 0.1mm solid #000000;
+            border-right: 0.1mm solid #000000;
+        }
+        .items tr.even {
+            background-color: #f5f5f5;
+        }
+        .items tr.summary {
+            background-color: #efefef;
+        }
+        .items tr.summary td {
+            font-weight: bold;
+            border-top: 0.1mm solid #000000;
+            border-bottom: 0.1mm solid #000000;
+        }
+        table thead th {
+            background-color: #ececec;
+            border: 0.1mm solid #000000;
+            font-weight: bold;
+            font-size: 10pt;
+            text-align: left;
+        }
+        .items td.totals {
+            font-weight: bold;
+            border: 0.1mm solid #000000;
+        }
+        .items .center,
+        .items td.duration,
+        .items td.cost {
+            text-align: center;
+        }
+        .text-nowrap {
+            white-space: nowrap;
+        }
+    </style>
+{% endblock %}
+</head>
+<body>
+{% block pdf_footer %}
+<!--mpdf
+<htmlpagefooter name="myfooter">
+<table style="border-top: 1px solid #000000; font-size: 9pt; padding-top: 3mm; width: 100%">
+<tr>
+    <td align="left">
+    {{ 'export.page_of'|trans({'%page%': '{PAGENO}', '%pages%': '{nb}'}) }}
+    {% if not showUserColumn and query.user %}
+        &ndash;
+        {{ 'label.user'|trans }}: {{ query.user.displayName }}
+    {% endif %}
+    </td>
+    <td align="right">
+    {% set company = config('theme.branding.company') %}
+    {% if company is not empty %}
+        {{ company|raw }} &ndash; {{ now|date_full }}
+    {% else %}
+        {{ 'export.date_copyright'|trans({'%date%': now|date_full, '%kimai%': '<a href="' ~ constant('App\\Constants::HOMEPAGE') ~ '">' ~ constant('App\\Constants::SOFTWARE') ~ '</a>'})|raw }}
+    {% endif %}
+    </td>
+</tr>
+</table>
+</htmlpagefooter>
+<sethtmlpagefooter name="myfooter" value="on" />
+mpdf-->
+{% endblock %}
+{% block summary %}
+    <h2 style="margin-bottom: 0; padding-bottom: 0">{{ 'export.document_title'|trans }}</h2>
+    <p>
+        {{ 'export.period'|trans }}:
+        {{ query.begin|date_short }} - {{ query.end|date_short }}
+    </p>
+    <h3>{{ 'export.summary'|trans }}</h3>
+    <table class="items">
+        <thead>
+        <tr>
+            <th>{{ 'label.customer'|trans }}</th>
+            <th>{{ 'label.project'|trans }}</th>
+            {% if showTimeBudget %}
+                <th class="center">{{ 'label.timeBudget'|trans }}</th>
+            {% endif %}
+            {% if showRateBudget %}
+                <th class="center">{{ 'label.budget'|trans }}</th>
+            {% endif %}
+            <th class="center">{{ 'label.duration'|trans }}</th>
+            {% if showRateColumn %}
+                {% if showInternalRate %}
+                    <th class="center">{{ 'label.rate_internal'|trans }}</th>
+                {% endif %}
+                <th class="center">{{ 'label.rate'|trans }}</th>
+            {% endif %}
+        </tr>
+        </thead>
+        <tbody>
+        {% set customer = null %}
+        {% set customerDuration = 0 %}
+        {% set customerRate = 0 %}
+        {% set customerInternalRate = 0 %}
+        {% set customerCurrency = null %}
+        {% set customerCount = 0 %}
+        {% set multiCurrency = false %}
+        {% set totalDuration = 0 %}
+        {% set totalInternalRate = 0 %}
+        {% set totalRate = 0 %}
+        {% for id, summary in summaries %}
+            {% set totalDuration = totalDuration + summary.duration %}
+            {% set totalInternalRate = totalInternalRate + summary.rate_internal %}
+            {% set totalRate = totalRate + summary.rate %}
+            {% if customerCurrency is not null and customerCurrency is not same as(summary.currency) %}
+                {% set multiCurrency = true %}
+            {% endif %}
+            {% if customer is same as(null) %}
+                {% set customer = summary.customer %}
+                {% set customerCurrency = summary.currency %}
+            {% endif %}
+            {% if customer is not same as(summary.customer) %}
+                <tr class="summary">
+                    <td colspan="2">
+                    </td>
+                    {% if showTimeBudget %}
+                        <td></td>
+                    {% endif %}
+                    {% if showRateBudget %}
+                        <td></td>
+                    {% endif %}
+                    <td class="totals duration">{{ customerDuration|duration(decimal) }}</td>
+                    {% if showRateColumn %}
+                        {% if showInternalRate %}
+                            <td class="totals cost">{{ customerInternalRate|money(customerCurrency) }}</td>
+                        {% endif %}
+                        <td class="totals cost">{{ customerRate|money(customerCurrency) }}</td>
+                    {% endif %}
+                </tr>
+                {% set customerCurrency = summary.currency %}
+                {% set customer = summary.customer %}
+                {% set customerDuration = 0 %}
+                {% set customerRate = 0 %}
+                {% set customerInternalRate = 0 %}
+                {% set customerCount = 0 %}
+            {% endif %}
+            <tr class="{{ cycle(['odd', 'even'], customerCount) }}">
+                <td>{{ summary.customer }}</td>
+                <td>{{ summary.project }}</td>
+                {% if showTimeBudget %}
+                    <td class="center">
+                        {% if budgets[id] is defined and budgets[id].time_left > 0 %}
+                            {{ budgets[id].time_left|duration(decimal) }}
+                        {% endif %}
+                    </td>
+                {% endif %}
+                {% if showRateBudget %}
+                    <td class="center">
+                        {% if budgets[id] is defined and budgets[id].money_left > 0 %}
+                            {{ budgets[id].money_left|money(summary.currency) }}
+                        {% endif %}
+                    </td>
+                {% endif %}
+                <td class="duration">{{ summary.duration|duration(decimal) }}</td>
+                {% if showRateColumn %}
+                    {% if showInternalRate %}
+                        <td class="cost">{{ summary.rate_internal|money(summary.currency) }}</td>
+                    {% endif %}
+                    <td class="cost">{{ summary.rate|money(summary.currency) }}</td>
+                {% endif %}
+            </tr>
+            {% set customerDuration = customerDuration + summary.duration %}
+            {% set customerRate = customerRate + summary.rate %}
+            {% set customerInternalRate = customerInternalRate + summary.rate_internal %}
+            {% set customerCount = customerCount + 1 %}
+        {% endfor %}
+        {% if customer is not same as(null) %}
+        <tr class="summary">
+            <td colspan="2"></td>
+            {% if showTimeBudget %}
+                <td></td>
+            {% endif %}
+            {% if showRateBudget %}
+                <td></td>
+            {% endif %}
+            <td class="totals duration">{{ customerDuration|duration(decimal) }}</td>
+            {% if showRateColumn %}
+                {% if showInternalRate %}
+                    <td class="totals cost">{{ customerInternalRate|money(customerCurrency) }}</td>
+                {% endif %}
+                <td class="totals cost">{{ customerRate|money(customerCurrency) }}</td>
+            {% endif %}
+        </tr>
+        {% endif %}
+        {% if showTotalSummary and not multiCurrency %}
+        <tr class="summary-total">
+            <td class="totals" colspan="2">
+                {{ 'sum.total'|trans }}
+            </td>
+            {% if showTimeBudget %}
+                <td></td>
+            {% endif %}
+            {% if showRateBudget %}
+                <td></td>
+            {% endif %}
+            <td class="totals duration">{{ totalDuration|duration(decimal) }}</td>
+            {% if showRateColumn %}
+                {% if showInternalRate %}
+                    <td class="totals cost">{{ totalInternalRate|money(customerCurrency) }}</td>
+                {% endif %}
+                <td class="totals cost">{{ totalRate|money(customerCurrency) }}</td>
+            {% endif %}
+        </tr>
+        {% endif %}
+        </tbody>
+    </table>
+
+    <pagebreak>
+{% endblock %}
+{% block items %}
+    
+    {% set duration = 0 %}
+    {% set rate = 0 %}
+    {% set rateInternal = 0 %}
+    {% set currency = false %}
+	{% set newUser = true %}
+	{% set userRowCount = 0 %}
+	{% set rowCount = 0 %}
+	{% set sortedEntries = entries|sort((a, b) => [a.project.name, a.user.displayName, a.begin] <=> [b.project.name, b.user.displayName, b.begin]) %}
+	{% set keys = [] %}
+	{% set userDuration = 0 %}
+	{% set reiseDuration = 0 %}
+	{% for key,entry in sortedEntries %}
+		{% set keys = keys|merge([key]) %}
+	{% endfor %}
+	
+	{% for entry in sortedEntries %}
+	
+	{% if newUser %}
+	<h3>Zeiten von {{entry.user.displayName}}</h3>
+    <table class="items">
+        <thead>
+        <tr>
+            <th>{{ 'label.date'|trans }}</th>
+            {% if showUserColumn %}
+                <th>{{ 'label.user'|trans }}</th>
+            {% endif %}
+            <th>{{ 'label.description'|trans }}</th>
+            <th class="center">{{ 'label.duration'|trans }}</th>
+			<th class="center">Reisezeit</th>
+            {% if showRateColumn %}
+                {% if showInternalRate %}
+                    <th class="center">{{ 'label.rate_internal'|trans }}</th>
+                {% endif %}
+                <th class="center">{{ 'label.rate'|trans }}</th>
+            {% endif %}
+        </tr>
+        </thead>
+        <tbody>
+		{% set newUser = false %}
+	{% endif %}
+        
+            {% set duration = duration + entry.duration %}
+            {% if currency is same as(false) %}
+                {% set currency = entry.project.customer.currency %}
+            {% endif %}
+            {% if currency is not same as(entry.project.customer.currency) %}
+                {% set currency = null %}
+            {% endif %}
+            <tr class="{{ cycle(['odd', 'even'], loop.index0) }}">
+                <td class="text-nowrap">
+                   {{ entry.begin|date_short }}
+                </td>
+                {% if showUserColumn %}
+                    <td>{{ entry.user.displayName }} </td>
+                {% endif %}
+                <td>
+				{{ entry.project.name }}
+                    <!--{{ entry.project.customer.name }} - {{ entry.project.name }}{% if entry.activity is not null %} - {{ entry.activity.name }}{% endif %}-->
+					{{ entry.activity.name }} 
+                    {% if entry.description is not empty %}
+                        <!--<br>-->
+                        <i> {{ entry.description|desc2html }}</i>
+                    {% endif %}
+                </td>
+                <td class="duration">{% if entry.activity.name != 'Reisezeit'%} {% set userDuration = userDuration + entry.duration %} {{ entry.duration|duration(decimal) }} {% endif %}</td>
+				<td class="duration">{% if entry.activity.name == 'Reisezeit'%} {% set reiseDuration = reiseDuration + entry.duration %}{{ entry.duration|duration(decimal) }} {% endif %}</td>
+				
+                {% if showRateColumn %}
+                    {# no check for is_granted('view_rate', entry) because it is only available for timesheets,
+                       but maybe missing for other potential export repositories #}
+                    {% set rate = rate + entry.rate %}
+                    {% set rateInternal = rateInternal + entry.internalRate %}
+                    {% set entryRate = entry.rate|money(entry.project.customer.currency) %}
+                    {% set entryRateInternal = entry.internalRate|money(entry.project.customer.currency) %}
+                    {% if showInternalRate %}
+                        <td class="cost">{{ entryRateInternal }}</td>
+                    {% endif %}
+                    <td class="cost">{{ entryRate }}</td>
+                {% endif %}
+            </tr>
+     
+	{% set rowCount = rowCount+1 %} 
+	{% if rowCount < sortedEntries|length %}
+		{% if entry.user.displayName !=  sortedEntries[keys[rowCount]].user.displayName	or entry.project.name !=  sortedEntries[keys[rowCount]].project.name %}
+				<tr class="summary">
+					{% if showUserColumn %}
+						<td colspan="3"></td>
+					{% else %}
+						<td colspan="2"></td>
+					{% endif %}
+					<td class="totals duration">{{ userDuration|duration(decimal) }}</td>
+					<td class="totals duration">{{ reiseDuration|duration(decimal) }}</td>
+					{% set userDuration = 0 %}
+					{% set reiseDuration = 0 %}
+					{% if showRateColumn %}
+						{% if showInternalRate %}
+							<td class="totals cost">{% if currency is not null %}{{ rateInternal|money(currency) }}{% endif %}</td>
+						{% endif %}
+						<td class="totals cost">{% if currency is not null %}{{ rate|money(currency) }}{% endif %}</td>
+					{% endif %}
+				</tr>
+			</tbody>
+		</table>
+		<pagebreak>
+		{% set newUser = true %}
+		{% endif %}
+	{% else %}
+		<tr class="summary">
+					{% if showUserColumn %}
+						<td colspan="3"></td>
+					{% else %}
+						<td colspan="2"></td>
+					{% endif %}
+					<td class="totals duration">{{ userDuration|duration(decimal) }}</td>
+					<td class="totals duration">{{ reiseDuration|duration(decimal) }}</td>
+					{% if showRateColumn %}
+						{% if showInternalRate %}
+							<td class="totals cost">{% if currency is not null %}{{ rateInternal|money(currency) }}{% endif %}</td>
+						{% endif %}
+						<td class="totals cost">{% if currency is not null %}{{ rate|money(currency) }}{% endif %}</td>
+					{% endif %}
+				</tr>
+			</tbody>
+		</table>
+	{% endif %}
+	{% endfor %}
+{% endblock %}
+</body>
+</html>
