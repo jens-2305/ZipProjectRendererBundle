@@ -7,7 +7,7 @@ A Kimai 2 plugin that allows to create a separate PDF file per project for sever
 
 Unpack the zip file into the Kimai Plugin directory, make sure the directory structure looks like this (especially the directory name 'ZipProjectRendererBundle'):
 
-``bash
+
 var/plugins/ 
 ├── ZipProjectRendererBundle
 │ ├── ZipProjectRendererBundle.php.
