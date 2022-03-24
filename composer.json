@@ -1,0 +1,29 @@
+{
+    "name": "gbs-it/zip-projectrenderer-plugin",
+    "description": "A Kimai 2 plugin that allows to create a separate PDF file per project for several selected projects in the export. The PDF-Files which are then packed into a zip archive that is downloaded.",
+    "homepage": ""https://www.kimai.org/store/",
+    "type": "kimai-plugin",
+    "version": "0.8",
+	"keywords": [
+        "kimai",
+        "kimai-plugin"
+    ],
+    "require": {
+        "kimai/kimai2-composer": "*"
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Jens Selders",
+            "email": "jens.selders@gbs-it.de",
+            "homepage": "https://www.gbs-it.de"
+        }
+    ],
+    "extra": {
+        "kimai": {
+            "require": "1.6",
+			"version": "0.8",
+            "name": "ZipProjectRendererBundle"
+        }
+    }
+}
