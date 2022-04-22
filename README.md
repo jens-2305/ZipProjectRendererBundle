@@ -15,7 +15,7 @@ var/plugins/
 
 Move the file var/plugins/ZipProjectRendererBundle/Resources/export/default.zip.twig
 to
-kimai2/var/export
+kimai2/templates/export/renderer
 
 See also https://www.kimai.org/documentation/export.html#adding-export-templates
 
