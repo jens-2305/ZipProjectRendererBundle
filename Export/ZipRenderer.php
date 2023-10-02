@@ -9,7 +9,7 @@ use Symfony\Component\HttpFoundation\Response;
 use App\Export\ExportContext;
 use App\Project\ProjectStatisticService;
 use App\Utils\FileHelper;
-use App\Utils\HtmlToPdfConverter;
+use App\Pdf\HtmlToPdfConverter;
 use Twig\Environment;
 use PhpOffice\PhpWord\Shared\ZipArchive;
 

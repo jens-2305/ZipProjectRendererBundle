@@ -19,6 +19,7 @@ kimai2/var/export
 
 See also https://www.kimai.org/documentation/export.html#adding-export-templates
 
+To get it working with Kimai 2 V2 the originally used Class "ExportContext" from kimai2 V1 https://raw.githubusercontent.com/kimai/kimai/1.x/src/Export/ExportContext.php have to be placed in kimai2/scr/Export/ExportContext.php (dont forget to temporary remove prior to updating V2 it is causing GIT errors if you try to update with this file present).
 
 ## Permissions
 
