@@ -4,6 +4,6 @@
   
 intitial Version
 
-## 0.9
+## 1.0
 
-migration to Kimai2 v2
+migration to Kimai 2.0
