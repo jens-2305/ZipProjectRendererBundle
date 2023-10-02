@@ -6,7 +6,7 @@ use App\Export\Base\RendererTrait;
 use App\Export\RendererInterface;
 use App\Repository\Query\TimesheetQuery;
 use Symfony\Component\HttpFoundation\Response;
-use App\Export\ExportContext;
+use App\Pdf\PdfContext;
 use App\Project\ProjectStatisticService;
 use App\Utils\FileHelper;
 use App\Pdf\HtmlToPdfConverter;
@@ -141,7 +141,7 @@ final class ZipRenderer implements RendererInterface
 
 	public function render(array $timesheets, TimesheetQuery $query): Response
     {
-        $context = new ExportContext();
+        $context = new PdfContext();
         $context->setOption('filename', 'kimai-export');
 
 			
